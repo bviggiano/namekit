@@ -23,7 +23,7 @@ from namekit._data import (
     EntityType,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "AFFILIATIONS",
     "Affiliation",

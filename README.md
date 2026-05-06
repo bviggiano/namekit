@@ -1,5 +1,9 @@
 # namekit
 
+[![PyPI](https://img.shields.io/pypi/v/namekit.svg)](https://pypi.org/project/namekit/)
+[![Python versions](https://img.shields.io/pypi/pyversions/namekit.svg)](https://pypi.org/project/namekit/)
+[![License](https://img.shields.io/pypi/l/namekit.svg)](https://github.com/bviggiano/namekit/blob/main/LICENSE)
+
 Deterministic pop-culture name generator. Map any string key to a stable,
 memorable name. Filter by franchise, entity type, or affiliation; choose how
 the name is formatted.
