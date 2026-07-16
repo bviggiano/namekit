@@ -12,6 +12,8 @@ from namekit._core import (
     list_entities,
     list_names,
     name,
+    name_from_mapping,
+    to_key,
 )
 from namekit._data import (
     AFFILIATIONS,
@@ -23,7 +25,7 @@ from namekit._data import (
     EntityType,
 )
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = [
     "AFFILIATIONS",
     "Affiliation",
@@ -42,4 +44,6 @@ __all__ = [
     "list_entities",
     "list_names",
     "name",
+    "name_from_mapping",
+    "to_key",
 ]

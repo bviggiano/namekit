@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
-from collections.abc import Iterable
-from typing import Literal
+from collections.abc import Iterable, Mapping
+from typing import Any, Literal
 
 from namekit._data import (
     AFFILIATIONS,
@@ -37,9 +38,7 @@ def _validate(field: str, allowed: tuple[str, ...], values: set[str] | None) -> 
         return
     bad = values - set(allowed)
     if bad:
-        raise KeyError(
-            f"Unknown {field}: {sorted(bad)}. Allowed: {list(allowed)}"
-        )
+        raise KeyError(f"Unknown {field}: {sorted(bad)}. Allowed: {list(allowed)}")
 
 
 _PUNCT_STRIP = re.compile(r"[‘’']")  # apostrophes
@@ -91,9 +90,7 @@ def format_name(
         return " ".join(selected)
     sep_for_case = {"snake": "_", "kebab": "-", "compact": ""}
     if case not in sep_for_case:
-        raise ValueError(
-            f"Unknown case: {case!r}. Allowed: {list(CASES)}"
-        )
+        raise ValueError(f"Unknown case: {case!r}. Allowed: {list(CASES)}")
     sep = sep_for_case[case]
     cleaned = [_slug(p, sep) for p in selected]
     return sep.join(cleaned)
@@ -139,9 +136,7 @@ def _select_corpus(
             f"Unknown name_part: {name_part!r}. Allowed: {list(NAME_PARTS)}"
         )
     if case not in CASES:
-        raise ValueError(
-            f"Unknown case: {case!r}. Allowed: {list(CASES)}"
-        )
+        raise ValueError(f"Unknown case: {case!r}. Allowed: {list(CASES)}")
 
     seen: set[str] = set()
     out: list[str] = []
@@ -156,6 +151,55 @@ def _select_corpus(
 
 def _digest(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def _json_default(obj: Any) -> Any:
+    if isinstance(obj, (set, frozenset)):
+        return sorted(obj, key=repr)
+    return str(obj)
+
+
+def to_key(mapping: Mapping[str, Any], *, exclude: Iterable[str] = ()) -> str:
+    """Serialize a mapping to a canonical, stable string key.
+
+    The key is order-independent (keys are sorted at every level) and
+    whitespace-free, so equal mappings always produce the same key across
+    processes and machines. Sets are sorted; other non-JSON values fall back
+    to ``str``. Top-level keys in ``exclude`` are dropped before serializing.
+
+    Args:
+        mapping: The mapping to serialize (e.g. a config dumped to a dict).
+        exclude: Top-level keys to omit from the key.
+
+    Returns:
+        A compact, deterministic JSON string.
+    """
+    excluded = set(exclude)
+    data = {k: v for k, v in mapping.items() if k not in excluded}
+    return json.dumps(
+        data, sort_keys=True, separators=(",", ":"), default=_json_default
+    )
+
+
+def name_from_mapping(
+    mapping: Mapping[str, Any], *, exclude: Iterable[str] = (), **kwargs: Any
+) -> str:
+    """Map a mapping to a name via its canonical key (see :func:`to_key`).
+
+    The same mapping (ignoring ``exclude`` keys) always yields the same name,
+    which makes it convenient for naming runs or experiments straight from a
+    config dumped to a dict.
+
+    Args:
+        mapping: The mapping to name.
+        exclude: Top-level keys to omit from the key.
+        **kwargs: Forwarded to :func:`name` (``franchise``, ``case``,
+            ``suffix``, ...).
+
+    Returns:
+        A formatted entity name (see :func:`name`).
+    """
+    return name(to_key(mapping, exclude=exclude), **kwargs)
 
 
 def name(
@@ -251,9 +295,7 @@ class NameKit:
             franchise, entity_type, affiliation, name_part, case
         )
         if not self._corpus:
-            raise ValueError(
-                "Selected corpus is empty for the given filters."
-            )
+            raise ValueError("Selected corpus is empty for the given filters.")
         self.suffix = suffix
         self.suffix_length = suffix_length
         self.separator = separator

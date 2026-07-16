@@ -62,11 +62,7 @@ class TestFranchiseFiltering:
 
 
 def _all_formatted_for_franchise(f: str) -> set[str]:
-    return {
-        format_name(e)
-        for e in ENTITIES
-        if e.franchise == f
-    }
+    return {format_name(e) for e in ENTITIES if e.franchise == f}
 
 
 class TestEntityTypeFiltering:
@@ -76,9 +72,7 @@ class TestEntityTypeFiltering:
             assert name(f"k{i}", entity_type="place") in place_names
 
     def test_only_characters(self):
-        char_names = {
-            format_name(e) for e in ENTITIES if e.entity_type == "character"
-        }
+        char_names = {format_name(e) for e in ENTITIES if e.entity_type == "character"}
         for i in range(50):
             assert name(f"k{i}", entity_type="character") in char_names
 
@@ -90,16 +84,12 @@ class TestEntityTypeFiltering:
         # Both types accepted via a list.
         union = {format_name(e) for e in ENTITIES}
         for i in range(50):
-            assert (
-                name(f"k{i}", entity_type=["character", "place"]) in union
-            )
+            assert name(f"k{i}", entity_type=["character", "place"]) in union
 
 
 class TestAffiliationFiltering:
     def test_only_good(self):
-        targets = {
-            format_name(e) for e in ENTITIES if e.affiliation == "good"
-        }
+        targets = {format_name(e) for e in ENTITIES if e.affiliation == "good"}
         for i in range(50):
             assert name(f"k{i}", affiliation="good") in targets
 
@@ -114,9 +104,7 @@ class TestAffiliationFiltering:
 
     def test_affiliation_list_excludes_villains(self):
         # ["good", "neutral"] should never produce a "bad" entity.
-        bad_names = {
-            format_name(e) for e in ENTITIES if e.affiliation == "bad"
-        }
+        bad_names = {format_name(e) for e in ENTITIES if e.affiliation == "bad"}
         for i in range(100):
             result = name(f"k{i}", affiliation=["good", "neutral"])
             assert result not in bad_names
@@ -246,10 +234,7 @@ class TestCase:
 
 class TestFormatName:
     def test_frodo_baggins_formats(self):
-        e = next(
-            x for x in ENTITIES
-            if x.parts == ("Frodo", "Baggins")
-        )
+        e = next(x for x in ENTITIES if x.parts == ("Frodo", "Baggins"))
         assert format_name(e, name_part="full", case="title") == "Frodo Baggins"
         assert format_name(e, name_part="full", case="snake") == "frodo_baggins"
         assert format_name(e, name_part="full", case="compact") == "frodobaggins"
@@ -295,8 +280,14 @@ class TestFormatName:
 
     def test_first_last_only_for_real_names(self):
         # King Boo, Iron Man, Mount Doom etc. are single-part — no "last".
-        for parts in [("King Boo",), ("Iron Man",), ("Mount Doom",),
-                      ("No-Face",), ("Bowser Jr",), ("Pallet Town",)]:
+        for parts in [
+            ("King Boo",),
+            ("Iron Man",),
+            ("Mount Doom",),
+            ("No-Face",),
+            ("Bowser Jr",),
+            ("Pallet Town",),
+        ]:
             entries = [e for e in ENTITIES if e.parts == parts]
             assert len(entries) == 1, f"missing or duplicated: {parts}"
             assert entries[0].last is None
@@ -328,7 +319,9 @@ class TestSuffix:
 class TestNameKit:
     def test_callable(self):
         kit = NameKit(franchise="lotr")
-        assert kit("user-42") in {format_name(e) for e in ENTITIES if e.franchise == "lotr"}
+        assert kit("user-42") in {
+            format_name(e) for e in ENTITIES if e.franchise == "lotr"
+        }
 
     def test_matches_function(self):
         kit = NameKit(franchise="lotr", case="title")
@@ -370,9 +363,7 @@ class TestListing:
 
     def test_list_entities_filtered(self):
         results = list_entities(franchise="lotr", entity_type="place")
-        assert all(
-            e.franchise == "lotr" and e.entity_type == "place" for e in results
-        )
+        assert all(e.franchise == "lotr" and e.entity_type == "place" for e in results)
         assert len(results) > 0
 
     def test_list_entities_name_part_last_filters_singletons(self):
@@ -395,7 +386,7 @@ class TestPackage:
         assert set(CASES) == {"snake", "title", "compact", "kebab"}
 
     def test_version(self):
-        assert namekit.__version__ == "0.1.0"
+        assert namekit.__version__ == "0.1.2"
 
     def test_no_duplicate_entries_within_franchise_and_type(self):
         seen: set[tuple[tuple[str, ...], str, str]] = set()
@@ -413,3 +404,37 @@ class TestPackage:
         match = [e for e in ENTITIES if e.parts == ("Frances", "Arnold")]
         assert len(match) == 1
         assert match[0].franchise == "scientists"
+
+
+# ---- to_key / name_from_mapping -------------------------------------------
+
+
+def test_to_key_is_order_independent():
+    assert namekit.to_key({"a": 1, "b": 2}) == namekit.to_key({"b": 2, "a": 1})
+
+
+def test_to_key_excludes_top_level_keys():
+    assert namekit.to_key(
+        {"a": 1, "device": "cpu"}, exclude=("device",)
+    ) == namekit.to_key({"a": 1})
+
+
+def test_to_key_sorts_sets_and_is_compact():
+    assert namekit.to_key({"s": {3, 1, 2}}) == '{"s":[1,2,3]}'
+
+
+def test_name_from_mapping_is_stable_and_matches_to_key():
+    m = {"lr": 0.5, "model": "esm2"}
+    assert namekit.name_from_mapping(m) == namekit.name(namekit.to_key(m))
+    assert namekit.name_from_mapping(m) == namekit.name_from_mapping(
+        dict(reversed(list(m.items())))
+    )
+
+
+def test_name_from_mapping_excludes_and_forwards_kwargs():
+    m = {"lr": 0.5, "model": "esm2", "device": "cpu"}
+    without = {"lr": 0.5, "model": "esm2"}
+    assert namekit.name_from_mapping(
+        m, exclude=("device",), suffix=True
+    ) == namekit.name_from_mapping(without, suffix=True)
+    assert namekit.name_from_mapping(m, suffix=True).count("_") >= 1  # suffix appended
