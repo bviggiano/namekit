@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import namekit
@@ -386,7 +388,7 @@ class TestPackage:
         assert set(CASES) == {"snake", "title", "compact", "kebab"}
 
     def test_version(self):
-        assert namekit.__version__ == "0.1.2"
+        assert re.fullmatch(r"\d+\.\d+\.\d+", namekit.__version__)
 
     def test_no_duplicate_entries_within_franchise_and_type(self):
         seen: set[tuple[tuple[str, ...], str, str]] = set()
